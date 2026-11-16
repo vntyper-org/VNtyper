@@ -6,6 +6,12 @@ All notable changes to VNtyper 2 are documented on this page.
 
 No unreleased changes.
 
+## 2.0.52 (2026-11-16)
+
+### Fixes
+
+- **Output on a share without symlinks (SMB/CIFS)**: when the run-local alignment view had to fall back to a hardlink, preflight rejected VNtyper's own verified view as "the same file as protected source", so every BAM or CRAM run with its output on such a share aborted. The pre-bound view is now accepted. When input and output sit on different mounts of such a share (no symlink and no hardlink possible), the error now says so and names the fix: a local output directory, or one volume for input and output.
+
 ## 2.0.51 (2026-11-13)
 
 ### Documentation

@@ -153,7 +153,10 @@ def build_alignment_view(
     view_index = Path(f"{view_path}{built_suffix}")
     view_index_candidates = tuple(Path(candidate) for candidate in index_candidate_names(str(view_path), file_format))
     protected_paths: tuple[str | Path, ...] = (in_path, existing_index) if existing_index is not None else (in_path,)
-    _validate_symlink_entry(view_path, (in_path,))
+    # A pre-bound view is the binding's own inode-verified entry; on filesystems without
+    # symlinks (CIFS) it is a hardlink of the input and would read as a source collision.
+    if binding is None or binding.view_path != str(view_path):
+        _validate_symlink_entry(view_path, (in_path,))
     owned_indexes: set[Path] = set()
     for candidate in view_index_candidates:
         if generated_index_is_owned(candidate, protected_paths):
