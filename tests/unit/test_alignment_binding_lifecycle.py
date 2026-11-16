@@ -821,3 +821,39 @@ def test_a_withdrawal_that_cannot_unlink_fails_closed_instead_of_falling_back(tm
         binding.close()
 
     assert not os.path.lexists(view)
+
+
+def test_prebound_hardlink_view_is_accepted_by_preflight(tmp_path: Path) -> None:
+    """A pipeline pre-bound hardlink view (no symlinks, e.g. a CIFS share) is the binding's own entry."""
+    alignment = tmp_path / "sample.bam"
+    alignment.write_bytes(b"original alignment")
+    stage_dir = tmp_path / "run" / "fastq_bam_processing"
+    stage_dir.mkdir(parents=True)
+    bound_view = stage_dir / "input.bam"
+
+    def build_index(command: str, *_args: object, **_kwargs: object) -> tuple[bool, str]:
+        arguments = shlex.split(command)
+        Path(arguments[arguments.index("-o") + 1]).write_bytes(b"fresh index")
+        return True, ""
+
+    with patch("vntyper.scripts.alignment_binding.os.stat", side_effect=_hide_proc_descriptor):
+        binding = AlignmentBinding(str(alignment))
+        binding.install_view(bound_view)
+    assert bound_view.is_symlink() is False
+    with patch("vntyper.scripts.alignment_preflight.capture_command", side_effect=build_index):
+        view_path, _, binding = build_alignment_view(
+            str(alignment),
+            str(stage_dir),
+            "input",
+            "bam",
+            {"tools": {"samtools": "samtools"}},
+            threads=1,
+            binding=binding,
+            bound_view_path=bound_view,
+        )
+    try:
+        assert Path(view_path).read_bytes() == b"original alignment"
+    finally:
+        binding.close()
+    assert alignment.read_bytes() == b"original alignment"
+    assert not os.path.lexists(bound_view)

@@ -159,7 +159,9 @@ class AlignmentBinding:
             message = (
                 f"Unable to create a stable run-local alignment binding for {self.input_path}: "
                 "procfs descriptor binding is unavailable and a same-filesystem hardlink could not be created: "
-                f"{error}"
+                f"{error}. The output directory must allow symlinks or share a filesystem with the input; "
+                "SMB/CIFS shares usually allow neither across mounts, so write the output to a local disk "
+                "or mount input and output as one volume."
             )
             logger.error(message)
             raise RuntimeError(message) from error
